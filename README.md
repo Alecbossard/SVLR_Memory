@@ -434,19 +434,111 @@ The robot selects the blue cylinder as the object matching the previously manipu
 - The robot forgets the destination.
 
 ---
+---
 
-## Debugging Memory
+## Example World Memory JSON
 
-Run SVLR with memory debug enabled:
+The world memory stores the information needed by the LLM to reason about previous observations and actions.
 
-```bash
-python main.py --robot_name PANDA --http_server 127.0.0.1 --port 8000 --debug-world-memory
+Example after the robot placed the purple cube on the green cube:
+
+```json
+{
+  "known_objects": {
+    "red cube": {
+      "visible": true,
+      "status": "visible",
+      "initial_position_robot": [0.52, -0.10, 0.17],
+      "previous_position_robot": null,
+      "current_position_robot": [0.52, -0.10, 0.17],
+      "attributes": {
+        "type": "cube",
+        "color": "red"
+      }
+    },
+    "yellow cube": {
+      "visible": true,
+      "status": "visible",
+      "initial_position_robot": [0.51, 0.11, 0.17],
+      "previous_position_robot": null,
+      "current_position_robot": [0.51, 0.11, 0.17],
+      "attributes": {
+        "type": "cube",
+        "color": "yellow"
+      }
+    },
+    "purple cube": {
+      "visible": true,
+      "status": "visible",
+      "initial_position_robot": [0.64, 0.10, 0.17],
+      "previous_position_robot": [0.64, 0.10, 0.17],
+      "current_position_robot": [0.64, -0.05, 0.22],
+      "attributes": {
+        "type": "cube",
+        "color": "purple"
+      },
+      "supported_by": "green cube"
+    },
+    "green cube": {
+      "visible": false,
+      "status": "occluded",
+      "initial_position_robot": [0.64, -0.05, 0.15],
+      "previous_position_robot": null,
+      "current_position_robot": [0.64, -0.05, 0.15],
+      "attributes": {
+        "type": "cube",
+        "color": "green"
+      },
+      "occluded_by": "purple cube"
+    }
+  },
+  "relations": [
+    {
+      "subject": "purple cube",
+      "relation": "on",
+      "object": "green cube"
+    },
+    {
+      "subject": "green cube",
+      "relation": "under",
+      "object": "purple cube"
+    },
+    {
+      "subject": "green cube",
+      "relation": "occluded_by",
+      "object": "purple cube"
+    }
+  ],
+  "last_successful_pick_and_place": {
+    "object": "purple cube",
+    "destination": "green cube",
+    "object_attributes": {
+      "type": "cube",
+      "color": "purple"
+    }
+  }
+}
 ```
 
-Inspect the memory file:
+This memory contains the key information needed for the three tests:
 
-```bash
-cat memory/world_state.json
+```text
+1. Hidden object:
+   The green cube is not visible and is occluded_by the purple cube.
+
+2. Return position:
+   The purple cube has a previous_position_robot and an initial_position_robot.
+
+3. Matching previous object:
+   The last_successful_pick_and_place stores the last manipulated object and its attributes.
 ```
 
-The memory should reset on SVLR startup so each test starts from a clean state.
+The LLM should not invent robot coordinates. It should only use object names and symbolic targets such as:
+
+```text
+previous position
+initial position
+matching object
+```
+
+
